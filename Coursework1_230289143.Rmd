@@ -1,0 +1,120 @@
+---
+title: "MTH6139 Time Series" 
+subtitle: "Coursework 1_ 230289143" 
+author: "Shilajan Surendran " 
+date: "Spring term 2026" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+
+# Section 1:Prophet
+In this coursework I'm using a forecasting system called Prophet to explore time series. I'm using the older version of Prophet as the GitHub version isn't working for me. I'm using the data for the last 2 years of co2 in the atmosphere and I am going to predict and analyse future co2 levels.Im basically analysing the trend of co2 in the atmosphere. Prophet is good at forecasting as it detects trends and patterns in historical data. We need to convert the data in prophet into a dataframe with the columns ds and y. ds contains the dates and y has the values.
+
+## Loading and plotting
+I loaded the libraries prophet and zoo for the time series forecasting and for the dates that go with the time series.I then plotted the original co2 data to see the trend.
+```{r,warning=FALSE,message=FALSE}
+library(prophet)
+library(zoo)
+plot(co2)
+```
+
+###Trend
+From the plot of the co2 data time series, there is an obvious steady increase in c02 levels over time. It also shows the fluctuations that occur in each year.
+
+###using linear regression
+```{r}
+linreg=lm(co2~time(co2))
+cf=coef(linreg); cf[2]
+plot(co2)+abline(a=cf[1],b=cf[2],col='red')
+```
+I have applied a linear regression model to better understand the trend of the data. There is a straight line going through the data points which is showing an upwards trend, which tells me that the future data forecast will also increase.
+
+
+
+```{r}
+library(prophet)
+start(co2)
+end(co2)
+frequency(co2)
+```
+The time series data that I have used starts from Jan 1959 to Dec 1997 and each data was collected monthly but I'm using it to predict 2 years ahead.
+
+
+
+
+```{r}
+#converting the time series data into a dataframe for Prophet
+df=data.frame(
+  ds = as.Date(as.yearmon(time(co2))),
+  #extracting the co2 values as numbers for prophet
+  y = as.numeric(co2))
+#create and fitting the prophet model
+model= prophet(df)
+#forecasting for 24 months
+future = make_future_dataframe(model, periods = 24)
+forecast= predict(model, future)
+
+plot(model, forecast)
+```
+```{r co2-forecast-plot, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+# Ensuring the date format
+df$ds <- as.Date(df$ds)
+forecast$ds <- as.Date(forecast$ds)
+
+# Future-only forecast data
+future_only <- forecast[forecast$ds > max(df$ds), ]
+
+# Plotting the data 
+ggplot() +
+  # Historical CO2 data
+  geom_line(data = df, aes(x = ds, y = y), color = "blue") +
+  
+  # Full forecast (fitted + predicted)
+  geom_line(data = forecast, aes(x = ds, y = yhat), color = "black") +
+  
+  # Confidence intervals
+  geom_ribbon(data = forecast, 
+              aes(x = ds, ymin = yhat_lower, ymax = yhat_upper),
+              alpha = 0.3, fill = "blue") +
+  
+  # Future-only forecast highlighted
+  geom_line(data = future_only, aes(x = ds, y = yhat), 
+            color = "green", size = 1) +
+  
+  # line to split hist and future data
+  geom_vline(xintercept = max(df$ds), 
+             linetype = "dashed", color = "red") +
+  
+  # Labels for the lines
+  labs(title = "CO2 Levels: Historical and Forecasting data",
+       subtitle = "Blue = historical | Black = fitted+forecast | Green = future-only",
+       x = "Date",
+       y = "CO2 (ppm)") +
+  
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 12))
+```
+
+This is the graph I get after plotting the historical and the future data for the co2 time series with prophet. As you can see it shows that there is an upward trend of co2 levels as time goes by.I am unble to increase the number of future data Prophet can predict, ive tried changing the code from  future = make_future_dataframe(model, periods = 24) to future = make_future_dataframe(model, periods = 120). But the graph doesn't seem a accommodate that.I can also see a seasonal pattern from the data as there is a fluctuation of data going up and down per period. the co2 levels drop in the summer as there is an increase in plants and there is a higher amount in winter as there is less plants which are absorbing the co2.
+
+
+
+
+
+
+
+
